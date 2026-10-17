@@ -14,9 +14,9 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 
-const ACCENT = { r: 0x2f, g: 0x5d, b: 0xff };
-const SECONDARY = { r: 0x1a, g: 0x1a, b: 0x1a };
-const BACKGROUND = { r: 0xff, g: 0xff, b: 0xff };
+const ACCENT = { r: 0x5d, g: 0x28, b: 0x52 };
+const SECONDARY = { r: 0x1e, g: 0x15, b: 0x20 };
+const BACKGROUND = { r: 0xf7, g: 0xf4, b: 0xf6 };
 
 const ASSETS_DIR = path.join(__dirname, "..", "assets");
 

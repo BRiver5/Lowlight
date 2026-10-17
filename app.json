@@ -6,12 +6,12 @@
     "scheme": "lowlight",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#F7F4F6"
     },
     "ios": {
       "supportsTablet": true,
@@ -25,7 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "_comment_blockedPermissions": "Приложение по умолчанию локальное: только уведомления и вибрация. INTERNET и SYSTEM_ALERT_WINDOW тоже заблокированы — JS-бандл и шрифты едут внутри AAB, сеть не нужна (проверено на Churnly/Quietzone/Useby). Если конкретному приложению реально нужно что-то из списка ниже — удали строку и напиши рядом, зачем (см. docs/PLAN.template.md, раздел \"Разрешения\").",
+      "_comment_blockedPermissions": "Lowlight: only POST_NOTIFICATIONS (opt-in evening wind-down and morning log reminders, inexact triggers; RECEIVE_BOOT_COMPLETED keeps them after a reboot) and VIBRATE. INTERNET and SYSTEM_ALERT_WINDOW blocked. No usage-stats access: screen time is logged by hand.",
       "blockedPermissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
@@ -58,7 +58,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#000000"
+          "color": "#5D2852"
         }
       ]
     ],

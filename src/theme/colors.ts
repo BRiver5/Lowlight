@@ -1,48 +1,49 @@
-// Палитра приложения. Это единственный файл, где должны жить цветовые значения —
-// компоненты и экраны берут цвета только отсюда, магические hex-коды в JSX запрещены.
+// Палитра Lowlight — "сумерки": розовато-серая бумага, графит, сливовые
+// чернила, тёплый янтарь экрана. Единственный файл с цветовыми значениями.
 //
-// ВАЖНО: при старте нового приложения из шаблона поменяй accent (и, если нужно,
-// background/surface) на свои — дизайн не должен повторяться от приложения к приложению,
-// даже если тема совпадает.
+// Акцент #5D2852 — tools/palette-search.js, сектор 312°: ближайшие соседи
+// SplitLease #804275 (ΔE 13.3), FairSplit #584064 (14.0), FocusJar #6B2F45
+// (14.1); из последних десяти ближе всех Useby #52148F (баклажан, заметно
+// синее и насыщеннее). Белый на акценте 11.1:1.
+// "Экран" (янтарь) и "сон" (ночной синий) — два смысловых цвета графиков,
+// качество сна — шкала от песочного к сливовому. Тема только светлая.
 
 export const light = {
-  background: "#FFFFFF",
-  backgroundAlt: "#FAFAFA",
+  background: "#F7F4F6",
+  backgroundAlt: "#ECE6EA",
   surface: "#FFFFFF",
-  surfaceAlt: "#F2F2F2",
-  border: "#E5E5E5",
-  ink: "#1A1A1A",
-  inkMuted: "#6B6B6B",
-  inkFaint: "#A3A3A3",
+  surfaceAlt: "#F4F0F3",
+  border: "#E2D9DF",
+  ink: "#1E1520",
+  inkMuted: "#5E5A66",
+  inkFaint: "#A39AA4",
   onAccent: "#FFFFFF",
-  accent: "#2F5DFF",
-  danger: "#E5484D",
-  success: "#2E9E5B",
-  // Предупреждение/второе свайп-действие (SwipeRow, бейдж Segmented) — тёмный
-  // янтарь, белый текст на нём ≥ 4.5:1. Подбирать под палитру приложения.
+  accent: "#5D2852",
+  accentInk: "#5D2852",
+  accentSoft: "#F1E4EE",
+  danger: "#B4362E",
+  success: "#2E7D5B",
   signal: "#9C5F12",
-  // Затемнение под шторкой (Sheet) и цвет строки состояния, пока шторка открыта:
-  // statusDimmed = background × 0.55 + ink × 0.45 (пересчитать при смене фона/ink).
-  scrim: "rgba(26,26,26,0.45)",
-  statusDimmed: "#989898",
+  scrim: "rgba(30,21,32,0.45)",
+  // background × 0.55 + ink × 0.45 — строка состояния, пока открыта шторка.
+  statusDimmed: "#939093",
+  screen: "#C27C2C", // экран — только для заливок и с подписью рядом
+  screenInk: "#9C5F12",
+  night: "#3E5C86",
+  nightSoft: "#E3E9F2",
 };
 
-export const dark = {
-  background: "#0E0E10",
-  backgroundAlt: "#141416",
-  surface: "#1B1B1E",
-  surfaceAlt: "#232326",
-  border: "#2C2C30",
-  ink: "#F2F2F2",
-  inkMuted: "#A3A3A9",
-  inkFaint: "#6B6B72",
-  onAccent: "#FFFFFF",
-  accent: "#5B7CFF",
-  danger: "#FF6B6F",
-  success: "#3FBE79",
-  signal: "#E0A040",
-  scrim: "rgba(0,0,0,0.6)",
-  statusDimmed: "#060607",
-};
-
+export const dark = light;
 export type Palette = typeof light;
+
+// Качество сна 1..5 → цвет (песочный → сливовый).
+export function qualityColor(q: number): string {
+  const stops = ["#E7C9A9", "#D9A88F", "#B9849A", "#8A4F7D", "#5D2852"];
+  return stops[Math.max(0, Math.min(4, Math.round(q) - 1))];
+}
+
+export function heatColor(t: number): string {
+  if (t <= 0) return light.backgroundAlt;
+  const stops = ["#E2C8DA", "#C08FB2", "#8A4F7D", "#5D2852"];
+  return stops[Math.min(stops.length - 1, Math.floor(t * stops.length - 1e-9))];
+}

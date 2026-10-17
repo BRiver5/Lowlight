@@ -1,81 +1,194 @@
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, Text, TextInput, View } from "react-native";
-import { Link, useFocusEffect } from "expo-router";
+import { useMemo, useRef, useState } from "react";
+import { FlatList, Text, View, useWindowDimensions } from "react-native";
+import { router } from "expo-router";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BarChart3, ChevronRight, Lightbulb, Moon, Settings2, SlidersHorizontal, Smartphone, Sun } from "lucide-react-native";
 import { useTheme } from "../src/theme";
-import { ScreenHeader } from "../src/components/ScreenHeader";
-import { Card } from "../src/components/Card";
-import { PrimaryButton } from "../src/components/PrimaryButton";
-import { EmptyState } from "../src/components/EmptyState";
-import { addItem, listItems, type Item } from "../src/data/items.example";
+import { qualityColor } from "../src/theme/colors";
+import { useApp } from "../src/store/appStore";
+import { EveningSheet, MorningSheet } from "../src/components/LogSheets";
+import { AnimatedRing } from "../src/components/AnimatedRing";
+import { IconButton } from "../src/components/Bits";
+import { PressableScale } from "../src/components/PressableScale";
+import { clockFromNoon, sleepMinutes } from "../src/lib/nights.ts";
+import { addDays, dayLabel, weekdayLabel } from "../src/lib/time.ts";
+import { haptics } from "../src/services/haptics";
+import type { NightRow } from "../src/data/repo";
 
-// ПРИМЕР главного экрана поверх items.example.ts. Замени на реальные экраны
-// приложения — паттерн (загрузка через useFocusEffect, локальное состояние,
-// EmptyState при пустом списке) переносится один в один.
-export default function HomeScreen() {
-  const theme = useTheme();
+const PAST = 13;
+
+// Focus Single-Card: одна ночь крупной карточкой, свайп влево/вправо — соседние
+// ночи; последняя карточка — сегодняшний вечер с планом.
+export default function Home() {
+  const t = useTheme();
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<Item[]>([]);
-  const [draft, setDraft] = useState("");
+  const { width } = useWindowDimensions();
+  const { analysis: a, nights } = useApp();
+  const [evening, setEvening] = useState<string | null>(null);
+  const [morning, setMorning] = useState<string | null>(null);
+  const [page, setPage] = useState(PAST);
+  const list = useRef<FlatList<string>>(null);
 
-  const load = useCallback(() => {
-    listItems().then(setItems);
-  }, []);
-
-  useFocusEffect(load);
+  const dates = useMemo(() => (a ? Array.from({ length: PAST + 1 }, (_, i) => addDays(a.tonight, i - PAST)) : []), [a?.tonight]);
+  const byDate = useMemo(() => Object.fromEntries(nights.map((n) => [n.date, n])), [nights]);
+  if (!a) return null;
+  const cardW = width - t.spacing.lg * 2;
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background,
-        paddingTop: insets.top + theme.spacing.lg,
-        paddingHorizontal: theme.spacing.lg,
-      }}
-    >
-      <ScreenHeader title="Lowlight" subtitle="Шаблонный экран — замени на свой." />
-
-      <View style={{ flexDirection: "row", gap: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Новая запись"
-          placeholderTextColor={theme.colors.inkFaint}
-          style={{
-            flex: 1,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.md,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-            color: theme.colors.ink,
-          }}
-        />
-        <PrimaryButton
-          label="Добавить"
-          onPress={async () => {
-            if (!draft.trim()) return;
-            await addItem(draft.trim());
-            setDraft("");
-            load();
-          }}
-        />
+    <View style={{ flex: 1, backgroundColor: t.colors.background, paddingTop: insets.top + t.spacing.md }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: t.spacing.lg }}>
+        <Text style={{ ...t.typography.title, color: t.colors.accent, flex: 1 }}>Lowlight</Text>
+        <IconButton label="Tonight's plan" onPress={() => router.push("/plan")}>
+          <SlidersHorizontal size={18} color={t.colors.ink} />
+        </IconButton>
+        <IconButton label="Insights" onPress={() => router.push("/insights")}>
+          <Lightbulb size={18} color={t.colors.ink} />
+        </IconButton>
+        <IconButton label="Stats" onPress={() => router.push("/stats")}>
+          <BarChart3 size={18} color={t.colors.ink} />
+        </IconButton>
+        <IconButton label="Settings" onPress={() => router.push("/settings")}>
+          <Settings2 size={18} color={t.colors.ink} />
+        </IconButton>
       </View>
 
       <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<EmptyState title="Пока пусто" description="Добавь первую запись выше." />}
-        renderItem={({ item }) => (
-          <Card style={{ marginBottom: theme.spacing.sm }}>
-            <Text style={{ color: theme.colors.ink, ...theme.typography.body }}>{item.title}</Text>
-          </Card>
-        )}
+        ref={list}
+        data={dates}
+        keyExtractor={(d) => d}
+        horizontal
+        pagingEnabled={false}
+        snapToInterval={cardW + t.spacing.md}
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={PAST}
+        getItemLayout={(_, i) => ({ length: cardW + t.spacing.md, offset: (cardW + t.spacing.md) * i, index: i })}
+        contentContainerStyle={{ paddingHorizontal: t.spacing.lg, gap: t.spacing.md, paddingVertical: t.spacing.lg }}
+        onMomentumScrollEnd={(e) => {
+          const p = Math.round(e.nativeEvent.contentOffset.x / (cardW + t.spacing.md));
+          if (p !== page) haptics.tick();
+          setPage(p);
+        }}
+        renderItem={({ item, index }) =>
+          index === PAST ? (
+            <TonightCard width={cardW} night={byDate[item]} onEvening={() => setEvening(item)} onMorning={() => setMorning(addDays(item, -1))} lastNight={byDate[addDays(item, -1)]} />
+          ) : (
+            <NightCard width={cardW} date={item} night={byDate[item]} onEvening={() => setEvening(item)} onMorning={() => setMorning(item)} />
+          )
+        }
       />
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, paddingBottom: insets.bottom + t.spacing.lg }}>
+        {dates.map((d, i) => (
+          <View key={d} style={{ width: i === page ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: i === page ? t.colors.accent : byDate[d]?.quality != null ? t.colors.inkFaint : t.colors.border }} />
+        ))}
+      </View>
+      <EveningSheet visible={evening !== null} onClose={() => setEvening(null)} date={evening ?? a.tonight} />
+      <MorningSheet visible={morning !== null} onClose={() => setMorning(null)} date={morning ?? a.tonight} />
+    </View>
+  );
+}
 
-      <Link href="/settings" style={{ color: theme.colors.inkMuted, textAlign: "center", padding: theme.spacing.md }}>
-        Настройки
-      </Link>
+function TonightCard({ width, night, lastNight, onEvening, onMorning }: { width: number; night?: NightRow; lastNight?: NightRow; onEvening: () => void; onMorning: () => void }) {
+  const t = useTheme();
+  const a = useApp((s) => s.analysis)!;
+  const p = a.plan;
+  const opt = a.tonightPlan;
+  const needMorning = !lastNight || lastNight.quality === null;
+  return (
+    <Animated.View entering={FadeInDown.duration(400)} style={{ width, flex: 1, backgroundColor: t.colors.surface, borderRadius: 28, borderWidth: 1, borderColor: t.colors.border, padding: t.spacing.xl, gap: t.spacing.lg }}>
+      <View>
+        <Text style={{ ...t.typography.overline, color: t.colors.inkMuted }}>Tonight · {weekdayLabel(a.tonight)}, {dayLabel(a.tonight)}</Text>
+        <Text style={{ ...t.typography.display, color: t.colors.ink }}>{a.chosen ? "Your chosen evening" : p.status === "conflict" ? "Best you can do tonight" : "Your evening plan"}</Text>
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: t.spacing.lg }}>
+        <AnimatedRing progress={Math.max(0, Math.min(1, (opt.mean - 1) / 4))} size={120} strokeWidth={10} color={qualityColor(opt.mean)} trackColor={t.colors.backgroundAlt}>
+          <Text style={{ ...t.typography.display, color: t.colors.ink }}>{opt.mean.toFixed(1)}</Text>
+          <Text style={{ fontSize: 11, color: t.colors.inkMuted }}>predicted</Text>
+        </AnimatedRing>
+        <View style={{ flex: 1, gap: 10 }}>
+          <Row icon={<Smartphone size={16} color={t.colors.screenInk} />} text={opt.screenMin === 0 ? "No screens in the last 2 h" : `At most ${opt.screenMin} min of screens after ${clockFromNoon(opt.bedtime - 120)}`} />
+          <Row icon={<Moon size={16} color={t.colors.night} />} text={`Lights out ${clockFromNoon(opt.bedtime)} · ${Math.floor(opt.sleepMin / 60)}h ${opt.sleepMin % 60 ? `${opt.sleepMin % 60}m` : ""} until ${clockFromNoon(a.constraints.wake + 720)}`} />
+          <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
+            {p.status === "learning"
+              ? "Still learning — a week of nights makes this personal."
+              : p.status === "conflict"
+                ? `Target ${a.constraints.targetQuality.toFixed(1)} is out of reach tonight.`
+                : `Likely ${opt.lo.toFixed(1)}–${opt.hi.toFixed(1)}; target ${a.constraints.targetQuality.toFixed(1)}.`}
+          </Text>
+        </View>
+      </View>
+      <PressableScale onPress={() => router.push("/plan")} style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: t.spacing.md, borderRadius: t.radius.md, backgroundColor: t.colors.accentSoft }}>
+        <Text style={{ ...t.typography.label, color: t.colors.accent, flex: 1 }}>
+          {p.status === "conflict" ? "See why and the ways out" : "Why this plan · try other evenings"}
+        </Text>
+        <ChevronRight size={16} color={t.colors.accent} />
+      </PressableScale>
+      <View style={{ flex: 1 }} />
+      <View style={{ gap: 10 }}>
+        {needMorning ? (
+          <PressableScale onPress={onMorning} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13, borderRadius: t.radius.pill, backgroundColor: t.colors.accent }}>
+            <Sun size={18} color={t.colors.onAccent} />
+            <Text style={{ ...t.typography.subtitle, color: t.colors.onAccent }}>How did last night go?</Text>
+          </PressableScale>
+        ) : null}
+        <PressableScale
+          onPress={onEvening}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13, borderRadius: t.radius.pill, backgroundColor: needMorning ? t.colors.surfaceAlt : t.colors.accent, borderWidth: needMorning ? 1 : 0, borderColor: t.colors.border }}
+        >
+          <Moon size={18} color={needMorning ? t.colors.accent : t.colors.onAccent} />
+          <Text style={{ ...t.typography.subtitle, color: needMorning ? t.colors.accent : t.colors.onAccent }}>{night?.screenMin != null ? "Edit tonight's evening" : "Log tonight's evening"}</Text>
+        </PressableScale>
+      </View>
+    </Animated.View>
+  );
+}
+
+function NightCard({ width, date, night, onEvening, onMorning }: { width: number; date: string; night?: NightRow; onEvening: () => void; onMorning: () => void }) {
+  const t = useTheme();
+  const fit = useApp((s) => s.analysis?.fits[date]);
+  const sleep = night ? sleepMinutes(night) : null;
+  return (
+    <PressableScale onPress={() => (night ? router.push(`/night/${date}`) : onEvening())} scaleTo={0.99} style={{ width, flex: 1, backgroundColor: t.colors.surface, borderRadius: 28, borderWidth: 1, borderColor: t.colors.border, padding: t.spacing.xl, gap: t.spacing.lg }}>
+      <View>
+        <Text style={{ ...t.typography.overline, color: t.colors.inkMuted }}>Night after {weekdayLabel(date)}, {dayLabel(date)}</Text>
+        <Text style={{ ...t.typography.display, color: night?.quality != null ? t.colors.ink : t.colors.inkFaint }}>{night?.quality != null ? ["Awful", "Poor", "Okay", "Good", "Great"][Math.round(night.quality) - 1] : "Not logged"}</Text>
+      </View>
+      {night?.quality != null ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: t.spacing.lg }}>
+          <AnimatedRing progress={(night.quality - 1) / 4} size={110} strokeWidth={10} color={qualityColor(night.quality)} trackColor={t.colors.backgroundAlt}>
+            <Text style={{ ...t.typography.display, color: t.colors.ink }}>{night.quality.toFixed(0)}</Text>
+            <Text style={{ fontSize: 11, color: t.colors.inkMuted }}>of 5</Text>
+          </AnimatedRing>
+          <View style={{ flex: 1, gap: 8 }}>
+            {night.screenMin != null ? <Row icon={<Smartphone size={16} color={t.colors.screenInk} />} text={`${night.screenMin} min of screens before bed`} /> : null}
+            {night.bedtime != null ? <Row icon={<Moon size={16} color={t.colors.night} />} text={`Lights out ${clockFromNoon(night.bedtime)}${sleep ? ` · slept ~${Math.floor(sleep / 60)}h ${sleep % 60}m` : ""}`} /> : null}
+            {fit ? <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>Predicted {fit.predicted.toFixed(1)} that evening — {Math.abs(fit.actual - fit.predicted) < 0.5 ? "about right" : fit.actual > fit.predicted ? "you slept better" : "you slept worse"}.</Text> : null}
+          </View>
+        </View>
+      ) : (
+        <Text style={{ ...t.typography.body, color: t.colors.inkMuted }}>Missed nights are fine — log what you remember, or leave it blank.</Text>
+      )}
+      <View style={{ flex: 1 }} />
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <PressableScale onPress={onEvening} style={{ flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: t.radius.pill, backgroundColor: t.colors.surfaceAlt, borderWidth: 1, borderColor: t.colors.border }}>
+          <Text style={{ ...t.typography.label, color: t.colors.ink }}>{night?.screenMin != null ? "Edit evening" : "Log evening"}</Text>
+        </PressableScale>
+        <PressableScale onPress={onMorning} style={{ flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: t.radius.pill, backgroundColor: t.colors.surfaceAlt, borderWidth: 1, borderColor: t.colors.border }}>
+          <Text style={{ ...t.typography.label, color: t.colors.ink }}>{night?.quality != null ? "Edit morning" : "Log morning"}</Text>
+        </PressableScale>
+      </View>
+      {night ? <Text style={{ ...t.typography.caption, color: t.colors.inkFaint, textAlign: "center" }}>Tap the card for the breakdown</Text> : null}
+    </PressableScale>
+  );
+}
+
+function Row({ icon, text }: { icon: React.ReactNode; text: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      {icon}
+      <Text style={{ ...t.typography.body, color: t.colors.ink, flex: 1 }}>{text}</Text>
     </View>
   );
 }

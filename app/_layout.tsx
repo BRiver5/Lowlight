@@ -8,23 +8,37 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { getDb } from "../src/db/client";
 import { useTheme } from "../src/theme";
 import { useUi } from "../src/store/uiStore";
+import { useApp } from "../src/store/appStore";
+import { useFonts, DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const theme = useTheme();
+  const [fontsLoaded] = useFonts({ DMSerifDisplay_400Regular });
+  const loaded = useApp((s) => s.ready);
 
   useEffect(() => {
     getDb()
-      .then(() => setReady(true))
-      .finally(() => SplashScreen.hideAsync().catch(() => {}));
+      .then(() => useApp.getState().refresh())
+      .catch(() => {})
+      .finally(() => setReady(true));
   }, []);
+
+  useEffect(() => {
+    if (ready && fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [ready, fontsLoaded]);
+
+  // Пустой стор после горячей перезагрузки модуля — подгрузить заново.
+  useEffect(() => {
+    if (ready && !loaded) useApp.getState().refresh().catch(() => {});
+  }, [ready, loaded]);
 
   // Если в приложении есть zustand-стор с данными: после горячей перезагрузки
   // модуля он пустой — здесь проверить store.ready и вызвать refresh() ещё раз,
   // иначе экраны получат null (проверено на Churnly).
-  if (!ready) return null;
+  if (!ready || !fontsLoaded || !loaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
