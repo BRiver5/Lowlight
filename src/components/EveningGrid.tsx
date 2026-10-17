@@ -90,11 +90,14 @@ export function EveningGrid({
         </View>
       </GestureDetector>
       <View style={{ flexDirection: "row", marginLeft: labelW }}>
-        {beds.map((b, i) => (
-          <Text key={b} style={{ width: cw, fontSize: 9, color: t.colors.inkMuted, textAlign: "center" }}>
-            {i % 2 === 0 ? clockFromNoon(b) : ""}
-          </Text>
-        ))}
+        {/* Подпись каждой 4-й колонки шириной в 4 клетки: в одну клетку "23:15" не влезает и переносится. */}
+        {beds.map((b, i) =>
+          i % 4 === 0 ? (
+            <Text key={b} numberOfLines={1} style={{ width: cw * Math.min(4, beds.length - i), fontSize: 10, color: t.colors.inkMuted }}>
+              {clockFromNoon(b)}
+            </Text>
+          ) : null,
+        )}
       </View>
     </View>
   );

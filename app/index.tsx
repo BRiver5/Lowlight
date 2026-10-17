@@ -59,12 +59,16 @@ export default function Home() {
         keyExtractor={(d) => d}
         horizontal
         pagingEnabled={false}
-        snapToInterval={cardW + t.spacing.md}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         initialScrollIndex={PAST}
-        getItemLayout={(_, i) => ({ length: cardW + t.spacing.md, offset: (cardW + t.spacing.md) * i, index: i })}
-        contentContainerStyle={{ paddingHorizontal: t.spacing.lg, gap: t.spacing.md, paddingVertical: t.spacing.lg }}
+        getItemLayout={(_, i) => ({ length: cardW + t.spacing.md, offset: (cardW + t.spacing.md) * i, index: i })} // смещение прокрутки, при котором карточка i стоит на месте
+        snapToOffsets={dates.map((_, i) => (cardW + t.spacing.md) * i)}
+        // Разделитель отдельным компонентом: `gap` в contentContainerStyle у
+        // горизонтального FlatList не попадает в getItemLayout, и карточки
+        // "уезжали" на ширину отступов (поймано на эмуляторе).
+        ItemSeparatorComponent={() => <View style={{ width: t.spacing.md }} />}
+        contentContainerStyle={{ paddingHorizontal: t.spacing.lg, paddingVertical: t.spacing.lg }}
         onMomentumScrollEnd={(e) => {
           const p = Math.round(e.nativeEvent.contentOffset.x / (cardW + t.spacing.md));
           if (p !== page) haptics.tick();
@@ -107,7 +111,7 @@ function TonightCard({ width, night, lastNight, onEvening, onMorning }: { width:
           <Text style={{ fontSize: 11, color: t.colors.inkMuted }}>predicted</Text>
         </AnimatedRing>
         <View style={{ flex: 1, gap: 10 }}>
-          <Row icon={<Smartphone size={16} color={t.colors.screenInk} />} text={opt.screenMin === 0 ? "No screens in the last 2 h" : `At most ${opt.screenMin} min of screens after ${clockFromNoon(opt.bedtime - 120)}`} />
+          <Row icon={<Smartphone size={16} color={t.colors.screenInk} />} text={opt.screenMin === 0 ? "No screens before bed" : `At most ${opt.screenMin} min of screens after ${clockFromNoon(opt.bedtime - 120)}`} />
           <Row icon={<Moon size={16} color={t.colors.night} />} text={`Lights out ${clockFromNoon(opt.bedtime)} · ${Math.floor(opt.sleepMin / 60)}h ${opt.sleepMin % 60 ? `${opt.sleepMin % 60}m` : ""} until ${clockFromNoon(a.constraints.wake + 720)}`} />
           <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
             {p.status === "learning"
@@ -124,6 +128,7 @@ function TonightCard({ width, night, lastNight, onEvening, onMorning }: { width:
         </Text>
         <ChevronRight size={16} color={t.colors.accent} />
       </PressableScale>
+      <WeekStrip />
       <View style={{ flex: 1 }} />
       <View style={{ gap: 10 }}>
         {needMorning ? (
@@ -180,6 +185,33 @@ function NightCard({ width, date, night, onEvening, onMorning }: { width: number
       </View>
       {night ? <Text style={{ ...t.typography.caption, color: t.colors.inkFaint, textAlign: "center" }}>Tap the card for the breakdown</Text> : null}
     </PressableScale>
+  );
+}
+
+// Последние 7 ночей мини-столбцами: высота — качество, янтарь снизу — экран.
+function WeekStrip() {
+  const t = useTheme();
+  const { nights, analysis: a } = useApp();
+  if (!a) return null;
+  const byDate = Object.fromEntries(nights.map((n) => [n.date, n]));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(a.tonight, i - 7));
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ ...t.typography.overline, color: t.colors.inkMuted }}>Last 7 nights</Text>
+      <View style={{ flexDirection: "row", gap: 6, alignItems: "flex-end", height: 86 }}>
+        {days.map((d) => {
+          const n = byDate[d];
+          const q = n?.quality ?? null;
+          return (
+            <View key={d} style={{ flex: 1, alignItems: "center", gap: 3 }}>
+              <View style={{ width: "100%", height: q ? (q / 5) * 52 : 3, borderRadius: 5, backgroundColor: q ? qualityColor(q) : t.colors.border }} />
+              <View style={{ width: "55%", height: n?.screenMin != null ? Math.max(2, (n.screenMin / 120) * 12) : 2, borderRadius: 2, backgroundColor: n?.screenMin != null ? t.colors.screen : t.colors.border }} />
+              <Text style={{ fontSize: 10, color: t.colors.inkMuted }}>{weekdayLabel(d).slice(0, 2)}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 

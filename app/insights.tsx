@@ -18,18 +18,22 @@ export default function Insights() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const a = useApp((s) => s.analysis);
+  const nights = useApp((s) => s.nights);
   if (!a) return null;
-  const n = Math.round(a.quality.n);
+  // Число ночей — настоящее, а не "взвешенное" с забыванием.
+  const n = Object.keys(a.fits).length;
   const wk = screenEffect(a.quality, false);
   const fr = screenEffect(a.quality, true);
   const late = coef(a.quality, 2);
   const latS = screenEffect(a.latency, false);
   const acc = accuracy(Object.values(a.fits).sort((x, y) => (x.date < y.date ? -1 : 1)));
 
-  const sentence = (e: { mean: number; lo: number; hi: number; clear: boolean }, unit: string, what: string) =>
-    e.clear
-      ? `Each hour of ${what} goes with ${Math.abs(e.mean).toFixed(2)} ${unit} ${e.mean < 0 ? "lower" : "higher"} (likely ${Math.abs(e.hi < 0 ? e.hi : e.lo).toFixed(2)}–${Math.abs(e.hi < 0 ? e.lo : e.hi).toFixed(2)}).`
-      : `No clear link yet — anywhere from ${e.lo.toFixed(2)} to +${e.hi.toFixed(2)} ${unit} per hour fits your nights.`;
+  const sentence = (e: { mean: number; lo: number; hi: number; clear: boolean }, unit: string, what: string) => {
+    const d = unit === "min" ? 0 : 2;
+    return e.clear
+      ? `Each hour of ${what} goes with ${Math.abs(e.mean).toFixed(d)} ${unit} ${e.mean < 0 ? "lower" : "higher"} (likely ${Math.abs(e.hi < 0 ? e.hi : e.lo).toFixed(d)}–${Math.abs(e.hi < 0 ? e.lo : e.hi).toFixed(d)}).`
+      : `No clear link yet — anywhere from ${e.lo.toFixed(d)} to +${e.hi.toFixed(d)} ${unit} per hour fits your nights.`;
+  };
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.background }} contentContainerStyle={{ paddingTop: insets.top + t.spacing.md, paddingHorizontal: t.spacing.lg, paddingBottom: insets.bottom + 40, gap: t.spacing.lg }}>
@@ -40,7 +44,7 @@ export default function Insights() {
         <Text style={{ ...t.typography.display, color: t.colors.ink }}>What your nights say</Text>
       </View>
       <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
-        From {n} complete {n === 1 ? "night" : "nights"}; recent weeks count more. Screens and late bedtimes travel together, so each effect below is measured with the other held fixed.
+        From {n} complete {n === 1 ? "night" : "nights"} of {nights.length} logged; recent weeks count more. Screens and late bedtimes travel together, so each effect below is measured with the other held fixed.
       </Text>
 
       <Animated.View entering={FadeInDown.duration(400)} style={card(t)}>

@@ -1,43 +1,19 @@
 # Lowlight
 
-**{{TAGLINE}}**
+Screens before bed vs the night after — measured on your own nights. Log your
+evening (screen minutes in the last two hours, lights-out) and how you slept;
+Lowlight fits a small Bayesian model that separates the screen effect from late
+bedtimes, says plainly when there's no clear link yet, and plans tonight: the
+smallest change that reaches your target, with a what-if map of evenings.
 
-{{Один абзац о том, что делает приложение и для кого.}}
+- Expo SDK 54, expo-router, expo-sqlite, reanimated, gesture-handler, react-native-svg
+- No backend, no network permission, no usage-stats access — screen time is logged by hand.
+- Not medical advice.
 
-## Особенности
-
-- ...
-
-## Стек
-
-- Expo SDK 54 + expo-router, TypeScript
-- `expo-sqlite` — вся persistence локально на устройстве, интернет не нужен
-- `expo-notifications` / `expo-haptics` — если приложение их использует
-
-## Запуск
-
-```bash
+```
 npm install
-npx expo start
+npx expo start          # Expo Go
+npm run verify          # tsc + tests + rules + export
 ```
 
-`a` — Android, `i` — iOS, либо QR-код через Expo Go.
-
-## Структура проекта
-
-```
-app/            expo-router экраны
-src/
-  theme/        палитра, типографика, отступы, анимации
-  db/           expo-sqlite схема + миграции
-  data/         доступ к данным (замени items.example.ts)
-  services/     notifications, haptics
-  components/   переиспользуемые UI-примитивы
-  lib/          id, даты
-tools/          генератор иконок, проверки, rename-скрипт
-```
-
-## Данные
-
-Все данные хранятся локально на устройстве. Регистрации нет, интернет не
-требуется для работы приложения.
+Engine and design notes: [PLAN.md](PLAN.md).

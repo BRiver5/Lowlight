@@ -105,8 +105,8 @@ export default function Stats() {
         <SectionTitle title="Screens vs sleep" />
         <Scatter pts={pts.map((p) => ({ x: p.screen, y: p.quality, free: p.free }))} slope={eff.mean} intercept={a.quality.mean[0] + (filter === "free" ? a.quality.mean[3] : 0)} />
         <Text style={{ ...t.typography.caption, color: t.colors.inkMuted }}>
-          Each dot is a night. The line is the model's screen effect for {filter === "free" ? "Fri & Sat" : "work"} nights at your usual bedtime: {eff.mean >= 0 ? "+" : ""}
-          {eff.mean.toFixed(2)} per hour {eff.clear ? "(clear)" : "(not clear yet)"}.
+          Each dot is a night. The line is the model's screen effect for {filter === "free" ? "Fri & Sat" : "work"} nights at your usual bedtime: {eff.mean >= 0 ? "+" : "−"}
+          {Math.abs(eff.mean).toFixed(2)} per hour {eff.clear ? "(clear)" : "(not clear yet)"}.
         </Text>
       </Animated.View>
 
@@ -136,7 +136,7 @@ export default function Stats() {
               <View key={m} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                 <Text style={{ fontSize: 10, color: t.colors.inkMuted }}>{c || ""}</Text>
                 <View style={{ height: (c / max) * 44, width: "100%", borderRadius: 4, backgroundColor: t.colors.night }} />
-                <Text style={{ fontSize: 10, color: t.colors.inkMuted }}>{m === 60 ? "60+" : m}m</Text>
+                <Text style={{ fontSize: 10, color: t.colors.inkMuted }}>{m === 60 ? "60+" : `${m}m`}</Text>
               </View>
             );
           })}

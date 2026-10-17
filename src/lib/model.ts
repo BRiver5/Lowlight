@@ -14,7 +14,7 @@
 
 export const K = 5;
 export const FORGET = 0.985;
-export const NAMES = ["Baseline", "Screens (per hour)", "Late bedtime (per hour)", "Weekend", "Weekend screen effect"] as const;
+export const NAMES = ["Baseline", "Screens (per hour)", "Late bedtime (per hour)", "Fri/Sat night", "Extra screen effect, Fri/Sat"] as const;
 
 export type Stats = { xtx: number[]; xty: number[]; yty: number; n: number };
 export type Prior = { mean: number[]; prec: number[]; a0: number; b0: number };

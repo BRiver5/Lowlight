@@ -167,7 +167,9 @@ function Compare({ a, b, aLabel, bLabel, latA, latB }: { a: Option; b: Option; a
     ["Predicted quality", a.mean.toFixed(1), b.mean.toFixed(1), b.mean - a.mean],
     ["Likely range", `${Math.max(1, a.lo).toFixed(1)}–${Math.min(5, a.hi).toFixed(1)}`, `${Math.max(1, b.lo).toFixed(1)}–${Math.min(5, b.hi).toFixed(1)}`, 0],
   ];
-  if (latA !== undefined && latB !== undefined) rows.push(["Falling asleep", `~${Math.max(0, latA).toFixed(0)} min`, `~${Math.max(0, latB).toFixed(0)} min`, latA - latB]);
+  // Линейная модель может уйти ниже нуля на крайних вечерах — показываем "<5 min".
+  const latTxt = (v: number) => (v < 5 ? "<5 min" : `~${v.toFixed(0)} min`);
+  if (latA !== undefined && latB !== undefined) rows.push(["Falling asleep", latTxt(latA), latTxt(latB), latA - latB]);
   return (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: "row" }}>
